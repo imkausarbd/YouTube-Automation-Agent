@@ -1,0 +1,557 @@
+{
+  "name": "YT Part 01",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -208
+      ],
+      "id": "2e574ee8-2ab9-4acf-ac06-5c6fc7ba6713",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You create video concepts based on the user query. All video will be a face or avatar video.\n\nYou output the following in JSON:\n\n{\n  \"Script\": {\n    \"Intro\": \"40-70 characters\",\n    \"Base\": \"280-350 characters\",\n    \"CTA\": \"55 characters\"\n  },\n  \"Title\": \"30-50 character\" (Short and engaging), Keep it curiosity-driven (e.g., \"I Tried This for 7 Days... Crazy Results!\"),\n  \"Description\": \"50-150 characters (Shorter, with key hashtags), hook. Add context, CTA, and hashtags.\"\n}"
+            },
+            {
+              "content": "<user-query>\ngenerate people faces\n/<user-query>"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        -448,
+        -208
+      ],
+      "id": "3371df5a-b4ee-4d3b-9d94-623396cb988f",
+      "name": "Ideator",
+      "credentials": {
+        "openAiApi": {
+          "id": "l9jwfJjVc1qcObKu",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8ad9d2fe-aef2-471c-8304-a7e5c700eabc",
+              "name": "text",
+              "value": "={{ $json.output[0].content[0].text.Script.Intro }}\n{{ $json.output[0].content[0].text.Script.Base }}\n{{ $json.output[0].content[0].text.Script.CTA }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        -384
+      ],
+      "id": "f5f5c286-11f5-489e-adcf-852605d00ed5",
+      "name": "Script"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputJson = $input.first().json;\n\n// Debug: log the actual input structure so you can check it in the console\nconsole.log(JSON.stringify(inputJson));\n\n// Try common field paths — adjust based on what you see in console\nconst script =\n  inputJson.Script ||\n  inputJson.text ||\n  inputJson.output ||\n  '';\n\nif (!script) {\n  throw new Error('Script field is empty — check console log for actual input structure: ' + JSON.stringify(inputJson));\n}\n\nconst WORDS_PER_SECOND = 2.5; // rough estimate, tune later\nconst CHUNK_DURATION = 6;\nconst WORDS_PER_CHUNK = Math.round(WORDS_PER_SECOND * CHUNK_DURATION);\n\nconst words = script.replace(/\\n/g, ' ').trim().split(/\\s+/);\n\nconst chunks = [];\nlet chunkIndex = 0;\n\nfor (let i = 0; i < words.length; i += WORDS_PER_CHUNK) {\n  const chunkWords = words.slice(i, i + WORDS_PER_CHUNK);\n  chunks.push({\n    index: chunkIndex,\n    text: chunkWords.join(' '),\n    start: chunkIndex * CHUNK_DURATION,\n    end: (chunkIndex + 1) * CHUNK_DURATION\n  });\n  chunkIndex++;\n}\n\nreturn chunks.map(chunk => ({ json: chunk }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -384
+      ],
+      "id": "c2ab4735-26ef-498d-a5c5-2424f5912bd0",
+      "name": "Splitting into 6 seconds"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o3-mini",
+          "mode": "list",
+          "cachedResultName": "O3-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an image prompt generator agent for video production. Your role is to create starting frames for a short video by transforming script segments into visually descriptive image prompts.\n\nYou will receive the full script for context, and one specific segment that this image is for.\n\nOutput in JSON:\n{\n  \"prompt\": \"image prompt text\"\n}\n\nImportant instructions:\n- Keep prompts extremely simple and concrete — describe one clear scene, subject, and setting\n- Avoid anything an AI image/video model would struggle to render: no text, no readable signs, no complex hand gestures, no multiple distinct faces interacting\n- AI models are good at: single subjects, landscapes, objects, simple environments, lighting effects\n- AI models are bad at: text, hands, multiple people interacting, fine detail, specific logos\n- Match the mood/topic of the segment, not the literal words"
+            },
+            {
+              "content": "=Full Script:  {{ $('Script').item.json.text }}\n\nCurrent Segment: {{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        -384
+      ],
+      "id": "57a3fbd5-0129-42a6-b5e7-b1538ff29baa",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "l9jwfJjVc1qcObKu",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-image-1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-IMAGE-1-MINI",
+          "cachedResultUrl": ""
+        },
+        "prompt": "={{ $json.output[0].content[0].text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -384
+      ],
+      "id": "8e826660-4aa7-4f78-a776-ffdfdaa094e1",
+      "name": "Generate an image",
+      "credentials": {
+        "openAiApi": {
+          "id": "l9jwfJjVc1qcObKu",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "={{ $json.fileName }}",
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH",
+          "mode": "list",
+          "cachedResultName": "YT Automation",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        544,
+        -384
+      ],
+      "id": "246631f1-77f8-48b4-9670-1f5691b52414",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "NbqWPSwVyT2pe3qf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "share",
+        "folderNoRootId": {
+          "__rl": true,
+          "value": "1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH",
+          "mode": "list",
+          "cachedResultName": "YT Automation",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        704,
+        -384
+      ],
+      "id": "d64dbbba-2b8d-46cb-a5be-0e00ef336e76",
+      "name": "Share folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "NbqWPSwVyT2pe3qf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-singapore.klingai.com/v1/videos/image2video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_KLING_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model_name",
+              "value": "kling-v1"
+            },
+            {
+              "name": "image",
+              "value": "=https://p2-kling.klingai.com/kcdn/cdn-kcdn112452/kling-qa-test/multi-2.png"
+            },
+            {
+              "name": "image_tail",
+              "value": "=https://p2-kling.klingai.com/kcdn/cdn-kcdn112452/kling-qa-test/multi-1.png"
+            },
+            {
+              "name": "prompt",
+              "value": "Camera zooms out"
+            },
+            {
+              "name": "negative_prompt"
+            },
+            {
+              "name": "duration",
+              "value": "5"
+            },
+            {
+              "name": "mode",
+              "value": "std"
+            },
+            {
+              "name": "sound",
+              "value": "off"
+            },
+            {
+              "name": "callback_url",
+              "value": "https://mallik1234567.app.n8n.cloud/webhook-test/4205f1a4-7a24-4796-bbe9-5574a7d35689"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        -384
+      ],
+      "id": "46985034-8666-4d11-bc5f-1c752dfa5c56",
+      "name": "HTTP Request",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/ohvvU75FpBEB8fdaLOMh",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "=YOUR_ELEVENLABS_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.Script, model_id: \"eleven_multilingual_v2\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16,
+        -96
+      ],
+      "id": "fd062479-e673-4cd1-b88f-68c322ff4544",
+      "name": "Audio Voice Generator"
+    },
+    {
+      "parameters": {
+        "name": "audio",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH",
+          "mode": "list",
+          "cachedResultName": "YT Automation",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        208,
+        -96
+      ],
+      "id": "eb5fac56-2969-48a9-8869-4347fecefd27",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "NbqWPSwVyT2pe3qf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5586716-6f64-46a9-8284-e09c4ea5428e",
+              "name": "Script",
+              "value": "={{ $json.output[0].content[0].text.Script.Intro }}\n{{ $json.output[0].content[0].text.Script.Base }}\n{{ $json.output[0].content[0].text.Script.CTA }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        -96
+      ],
+      "id": "03207cbe-d42a-40d8-9661-333b79ea9724",
+      "name": "Script1"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "share",
+        "folderNoRootId": {
+          "__rl": true,
+          "value": "1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH",
+          "mode": "list",
+          "cachedResultName": "YT Automation",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Xu3zxwNTCV-sa-aGvQvLy0Qa4zkIzrcH"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        400,
+        -96
+      ],
+      "id": "bbf5e376-fc8a-4d69-8488-98c9613a3fae",
+      "name": "Share folder1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "NbqWPSwVyT2pe3qf",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Ideator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ideator": {
+      "main": [
+        [
+          {
+            "node": "Script",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Script1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script": {
+      "main": [
+        [
+          {
+            "node": "Splitting into 6 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitting into 6 seconds": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Share folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share folder": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio Voice Generator": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file1": {
+      "main": [
+        [
+          {
+            "node": "Share folder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script1": {
+      "main": [
+        [
+          {
+            "node": "Audio Voice Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d28f0489-ca74-4abf-9f13-cb96c8a9f6cc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9de2a9185e8ba0f6a23e1e2a1fe2ca6c6415a8601ecd2e000865fde16869890c"
+  },
+  "nodeGroups": [],
+  "id": "rBrxSPkZUlRmS0gC",
+  "tags": []
+}

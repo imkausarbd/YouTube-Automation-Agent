@@ -1,0 +1,347 @@
+{
+  "name": "YT Part 02",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "4205f1a4-7a24-4796-bbe9-5574a7d35689",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9e42eeea-1162-4c36-9094-88cd362ea149",
+      "name": "Webhook",
+      "webhookId": "4205f1a4-7a24-4796-bbe9-5574a7d35689"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/ffmpeg-api/merge-audio-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Key YOUR_FAL_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "video_url",
+              "value": "={{ $('HTTP Request').item.json.data.task_result.videos[0].url }}"
+            },
+            {
+              "name": "audio_url",
+              "value": "https://drive.google.com/file/d/11_lDRdX6wZJaUV1BXFC6Ek7gGBrVz01n/view?usp=sharing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        704,
+        0
+      ],
+      "id": "25c25a40-ec51-4c39-a177-6c90db575c8b",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.status_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Key YOUR_FAL_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        0
+      ],
+      "id": "ce33789b-e853-4ed6-b489-31757d177d8b",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1qhlForLBDwqpbsKIagtgKcZ2AodpCIHk",
+          "mode": "list",
+          "cachedResultName": "audio",
+          "cachedResultUrl": "https://drive.google.com/file/d/1qhlForLBDwqpbsKIagtgKcZ2AodpCIHk/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        528,
+        0
+      ],
+      "id": "1c9d96a0-d0cf-4bb0-9263-f76bee7a75f6",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "NbqWPSwVyT2pe3qf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "first video",
+        "regionCode": "BD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "8928c7c2-789e-4151-bbb4-8a60d3871361",
+      "name": "Upload a video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "HMxE4AU84OG7Fcoc",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.video.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "67f4aff9-11fe-4016-99e6-25eeb5f006bd",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "url": "https://api-singapore.klingai.com/v1/videos/image2video/897713422840758329",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_KLING_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "56e62c31-491a-4be0-a961-6f93edd62435",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9d4f0e75-ddf0-4975-afe9-7582c9801cf4",
+              "leftValue": "={{ $json.data.task_status }}",
+              "rightValue": "succeed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        352,
+        0
+      ],
+      "id": "0cbc7644-5f60-436c-8284-a08341ff2b2e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Key YOUR_FAL_API_KEY"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "68d8c181-56a4-49af-9649-cb5ce8fb7f3e",
+      "name": "HTTP Request4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "Upload a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a7a56b4c-149c-4997-b047-4dabe6fc0584",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9de2a9185e8ba0f6a23e1e2a1fe2ca6c6415a8601ecd2e000865fde16869890c"
+  },
+  "nodeGroups": [],
+  "id": "khgfGPMui7G83YZX",
+  "tags": []
+}
